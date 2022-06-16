@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music player</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.2/css/all.min.css"
+        integrity="sha512-HK5fgLBL+xu6dm/Ii3z4xhlSUyZgTT9tuc/hSrtw6uzJOvgRr2a9jyxxT1ely+B+xFAmJKVSTbpM/CuL7qxO8w=="
+        crossorigin="anonymous" />
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./assets/css/style.css">
+</head>
+
+<body>
+    <div class="player">
+        <!-- Dashboard -->
+        <div class="dashboard">
+            <!-- Header -->
+            <header>
+                <h4>Now playing:</h4>
+                <h2>String 57th & 9th</h2>
+            </header>
+
+            <!-- CD -->
+            <div class="cd">
+                <div class="cd-thumb"
+                    style="background-image: url('https://i.ytimg.com/vi/jTLhQf5KJSc/maxresdefault.jpg')">
+                </div>
+            </div>
+
+            <!-- Control -->
+            <div class="control">
+                <div class="btn btn-repeat">
+                    <i class="fas fa-redo"></i>
+                </div>
+                <div class="btn btn-prev">
+                    <i class="fas fa-step-backward"></i>
+                </div>
+                <div class="btn btn-toggle-play">
+                    <i class="fas fa-pause icon-pause"></i>
+                    <i class="fas fa-play icon-play"></i>
+                </div>
+                <div class="btn btn-next">
+                    <i class="fas fa-step-forward"></i>
+                </div>
+                <div class="btn btn-random">
+                    <i class="fas fa-random"></i>
+                </div>
+            </div>
+
+            <input id="progress" class="progress" type="range" value="0" step="1" min="0" max="100">
+
+            <audio id="audio" src=""></audio>
+        </div>
+
+        <!-- Playlist -->
+        <div class="playlist">
+            
+        </div>
+    </div>
+
+    <script>
+        const $ = document.querySelector.bind(document)
+        const $$ = document.querySelectorAll.bind(document)
+        const heading = $('header h2')
+        const cdThumb = $('.cd-thumb')
+        const audio = $('#audio')
+        const cd = $('.cd')
+        const playBtn = $('.btn-toggle-play')
+        const player = $('.player')
+        const range = $('#progress')
+        const nextBtn = $('.btn-next')
+        const prevBtn = $('.btn-prev')
+        const randomBtn = $('.btn-random')
+        const repeatBtn = $('.btn-repeat')
+        const playList = $('.playlist')
+        var isSong = []
+
+        const app = {
+            currentIndex: 0,
+            isPlaying: false,
+            isRandom: false,
+            isRepeat: false,
+            songs: [
+                {
+                    name: 'YoungBlood',
+                    singer: '5 Seconds of Summer',
+                    path: './assets/music/5 Seconds of Summer - Youngblood (Official Video).mp3',
+                    image: '/assets/img/5sos.jpg'
+                },
+                {
+                    name: 'Lie to me',
+                    singer: '5 Seconds of Summer',
+                    path: './assets/music/5 Seconds of Summer - Lie To Me.mp3',
+                    image: '/assets/img/5sos.jpg'
+                },
+                {
+                    name: 'Life is a highway',
+                    singer: 'Rascal Flatts',
+                    path: './assets/music/Rascal Flatts - Life Is a Highway (From _Cars__Official Video).mp3',
+                    image: '/assets/img/car.jpg'
+                },
+                {
+                    name: 'Robbers',
+                    singer: 'The 1975',
+                    path: './assets/music/The 1975 - Robbers (Official Video) (Explicit).mp3',
+                    image: '/assets/img/the1975.jpg'
+                },
+                {
+                    name: 'Sobody else',
+                    singer: 'The 1975',
+                    path: './assets/music/the 1975 - somebody else __ lyrics.mp3',
+                    image: '/assets/img/the1975.jpg'
+                },
+                {
+                    name: 'Do I Wanna Know',
+                    singer: 'Arctic Monkeys',
+                    path: './assets/music/Arctic Monkeys - Do I Wanna Know_ (Official Video).mp3',
+                    image: '/assets/img/arcticmonkeys.png'
+                },
+                {
+                    name: "Why'd You Only Call Me When You High",
+                    singer: 'Arctic Monkeys',
+                    path: "./assets/music/Why'd You Only Call Me When You're High_ __ Arctic Monkeys Lyrics.mp3",
+                    image: '/assets/img/arcticmonkeys.png'
+                },
+            ],
+            
+            render: function() {
+                const htmls = this.songs.map((song,index) => {
+                    return `
+                    <div class="song ${index == this.currentIndex ? 'active' : ''}" data-index='${index}'>
+                        <div class="thumb"
+                            style="background-image: url('${song.image}')">
+                        </div>
+                        <div class="body">
+                            <h3 class="title">${song.name}</h3>
+                            <p class="author">${song.singer}</p>
+                        </div>
+                        <div class="option">
+                            <i class="fas fa-ellipsis-h"></i>
+                        </div>
+                    </div>
+                    `
+                })
+                playList.innerHTML = htmls.join('')
+            },
+            definePropeties: function (props) {
+                Object.defineProperty(this,'currentSong',{
+                    get: function () {
+                        return this.songs[this.currentIndex]
+                    }
+                })
+            },
+            handleEvents: function() {
+                const _this = this
+                // Xử lý cd quay/ dừng
+                const cdThumdAnimate = cdThumb.animate([
+                    {transform: 'rotate(360deg)'}
+                ],{
+                    duration:10000, //10 seconds
+                    iterations: Infinity
+                })
+                cdThumdAnimate.pause()
+
+                // Xử lý phóng to/ thu nhỏ cd 
+                const cdWidth = cd.offsetWidth
+                document.onscroll = function() {
+                    const scrollTop = window.scrollY || document.documentElement.scrollTop
+                    const newcdWidth = cdWidth - scrollTop
+
+                    cd.style.width = newcdWidth > 0 ? newcdWidth +  'px' : 0 
+                    cd.style.opacity = newcdWidth / cdWidth
+                }
+
+                // Xử lý khi click play
+                playBtn.onclick = function() {
+                    if(_this.isPlaying){ 
+                        audio.pause()                  
+                    }else {                      
+                        audio.play()     
+                    }            
+                }
+                //Khi song được chạy
+                audio.onplay = function() {
+                    _this.isPlaying = true
+                    player.classList.add('playing')
+                    cdThumdAnimate.play()
+                }
+                //Khi song bị dừng
+                audio.onpause = function() {
+                    _this.isPlaying = false
+                    player.classList.remove('playing')
+                    cdThumdAnimate.pause()
+                }
+
+                // Khi tiến độ bài hát thay đổi
+                audio.ontimeupdate = function() {
+                    if(audio.duration){
+                         range.value = Math.floor(audio.currentTime / audio.duration*100)   
+                    }
+                }
+
+                // Xử lý tua song
+                range.oninput = function(e) {
+                   const seekTime =  e.target.value * audio.duration / 100
+                   audio.currentTime = seekTime
+                }
+
+                // Khi next bài
+                nextBtn.onclick = function() {
+                    if(_this.isRandom){
+                        if(isSong.length >= _this.songs.length) {
+                            isSong.splice(0,isSong.length)
+                        }
+                        _this.playRandomSong()
+                    }else{
+                        _this.nextSong()
+                    }
+                    audio.play()
+                    _this.render()
+                    _this.scrollToActiveSong()
+                }
+
+                // Khi prev bài
+                prevBtn.onclick = function() {
+                    if(_this.isRandom){
+                        if(isSong.length >= _this.songs.length) {
+                            isSong.splice(0,isSong.length)
+                        }
+                        _this.playRandomSong()
+                    }else{
+                        _this.prevSong()
+                    }
+                    audio.play()
+                    _this.render()
+                    _this.scrollToActiveSong()
+                }
+
+                // Random bài
+                randomBtn.onclick = function() {
+                    _this.isRandom = !_this.isRandom
+                    randomBtn.classList.toggle('active',_this.isRandom)
+                }
+
+                // Chạy lại bài
+                repeatBtn.onclick = function() {
+                    _this.isRepeat = !_this.isRepeat
+                    repeatBtn.classList.toggle('active',_this.isRepeat)
+                }
+
+                // Xử lý next song khi audio ended
+                audio.onended = function() {
+                    if(_this.isRepeat){
+                        audio.play()
+                    }else{
+                        nextBtn.click()
+                    }        
+                }
+
+                // Lắng nghe hành vi click vào play list
+                playList.onclick = function(e) {
+                    const songNode = e.target.closest('.song:not(.active)')
+                    if( songNode || e.target.closest('.option')){
+                        if(songNode) {
+                        //    _this.currentIndex= songNode.getAttribute('data-index')
+                           _this.currentIndex = songNode.dataset.index
+                           _this.loadCurrentSong()
+                           _this.render()
+                           audio.play()
+                            
+                        }
+                        if(e.target.closest('.option')) {
+                            console.log('Option')
+                        }
+                    }
+                }
+
+            },
+            loadCurrentSong : function() {
+                heading.innerText = this.currentSong.name
+                cdThumb.style.backgroundImage = `url('${this.currentSong.image}')`
+                audio.src = this.currentSong.path 
+
+                // console.log(heading,cdThumb,audio)
+                
+            },
+            nextSong : function() {
+                this.currentIndex++
+                if(this.currentIndex == this.songs.length ){
+                    this.currentIndex = 0
+                }
+                this.loadCurrentSong()
+            },
+            prevSong : function() {
+                this.currentIndex--
+                if(this.currentIndex < 0)
+                    this.currentIndex = this.songs.length - 1
+                this.loadCurrentSong()
+            },
+            playRandomSong : function() {
+                let newIndex
+                do {
+                    newIndex = Math.floor(Math.random() * this.songs.length)
+                } while(isSong.includes(newIndex))
+                if(!isSong.includes(newIndex)) {
+                    isSong.push(newIndex)
+                    this.currentIndex = newIndex
+                    this.loadCurrentSong()
+                }
+                console.log(isSong)
+                console.log(newIndex)
+                
+            },
+            scrollToActiveSong : function() {
+                setTimeout(() => {
+                    if(this.currentIndex == 0) {
+                        $('.song.active').scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'center'
+                    })
+                    } else {
+                        $('.song.active').scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'nearest'
+                    })
+                    }                  
+                },300)
+            },
+            start: function() {
+                //Định nghĩa các thuộc tính cho object
+                this.definePropeties()
+
+                //Lắng nghe/ xử lý DOM
+                this.handleEvents()
+
+                //Load thông tin bài đầu tiên vào UI khi chạy ứng dụng
+                this.loadCurrentSong()
+
+                // Render playlist
+                this.render()
+            }
+        }
+
+        app.start()
+    </script>
+</body>
+
+</html>
